@@ -17,6 +17,7 @@ import nu.xom.ParsingException;
 import nu.xom.ValidityException;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -30,12 +31,14 @@ import java.util.Set;
 public class PeerTracker implements DiscoveryListener {
 
     private final DiscoveryService discoveryService;
+    private final String peerName;
 
     private final Set<String> peers = new HashSet<String>();
 
     @Autowired
-    public PeerTracker(DiscoveryService discoveryService) throws IOException, PeerGroupException {
+    public PeerTracker(DiscoveryService discoveryService, @Qualifier("peerName") String peerName) throws IOException, PeerGroupException {
         this.discoveryService = discoveryService;
+        this.peerName = peerName;
         publishModule();
         discoveryService.addDiscoveryListener(this);
     }
@@ -53,7 +56,7 @@ public class PeerTracker implements DiscoveryListener {
         ModuleClassAdvertisement mcadv = (ModuleClassAdvertisement) AdvertisementFactory.newAdvertisement(ModuleClassAdvertisement.getAdvertisementType());
         mcadv.setName("STACK-OVERFLOW:HELLO");
 
-        mcadv.setDescription(System.getProperty("user.name") + "@" + InetAddress.getLocalHost().getHostName());
+        mcadv.setDescription(peerName);
         ModuleClassID mcID = IDFactory.newModuleClassID();
         mcadv.setModuleClassID(mcID);
 
@@ -72,7 +75,8 @@ public class PeerTracker implements DiscoveryListener {
             Nodes descriptions = doc.query("//Desc");
             if (descriptions.size() > 0) {
                 peer = descriptions.get(0).getValue();
-            } else {
+            }
+            if (peer == null || peer.startsWith("Tutorial")) {
                 Nodes mcids = doc.query("//MCID");
                 if (mcids.size() > 0) {
                     peer = mcids.get(0).getValue();

@@ -1,5 +1,6 @@
 package com.github.davidjessop.gaskell;
 
+import net.jxta.endpoint.MessageElement;
 import net.jxta.pipe.InputPipe;
 import net.jxta.pipe.PipeID;
 import net.jxta.pipe.PipeMsgEvent;
@@ -36,7 +37,6 @@ public class BroadcastListener implements PipeMsgListener {
 
     private final String execCommand;
     private final InputPipe inputPipe;
-    private int messageCount;
 
     @Autowired
     public BroadcastListener(AdvertisementUtil advertisementUtil, PipeService pipeService, PipeID multicastId) throws IOException, InterruptedException {
@@ -62,8 +62,16 @@ public class BroadcastListener implements PipeMsgListener {
 
     @Override
     public void pipeMsgEvent(PipeMsgEvent event) {
-        System.out.println("received message " + ++messageCount);
-
+        String peerName = "anonymous";
+        MessageElement messageElement = event.getMessage().getMessageElement(RingtoneTriggerController.PEER_NAME);
+        if (messageElement != null) {
+            try {
+                peerName = new String(messageElement.getBytes(false), RingtoneTriggerController.ENCODING);
+            } catch (UnsupportedEncodingException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        System.out.println("received trigger from " + peerName);
         try {
             Runtime.getRuntime().exec(execCommand);
         } catch (IOException e) {

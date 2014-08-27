@@ -16,6 +16,7 @@ import net.jxta.platform.NetworkManager;
 import net.jxta.protocol.ModuleImplAdvertisement;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -24,6 +25,8 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Random;
 
 @Configuration
@@ -36,7 +39,6 @@ public class DistributedGaskellConfig {
     private static final String SUBGROUP_DESC = "...";
     private static final PeerGroupID SUBGROUP_ID = IDFactory.newPeerGroupID(PeerGroupID.defaultNetPeerGroupID, SUBGROUP_NAME.getBytes());
 
-    private static final String unicast_name = "This must be spelled the same too";
     private static final String MULTICAST_NAME = "Or else you will get the wrong PipeID";
 
 
@@ -112,6 +114,10 @@ public class DistributedGaskellConfig {
         return IDFactory.newPipeID(subgroup.getPeerGroupID(), MULTICAST_NAME.getBytes());
     }
 
-
+    @Bean
+    @Qualifier("peerName")
+    public String peerName() throws UnknownHostException {
+        return System.getProperty("user.name") + "@" + InetAddress.getLocalHost().getHostName();
+    }
 
 }
