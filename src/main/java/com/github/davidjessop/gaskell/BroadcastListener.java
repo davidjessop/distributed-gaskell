@@ -17,26 +17,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
-import java.net.URL;
-import java.net.URLDecoder;
-import java.util.concurrent.CountDownLatch;
-
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.Clip;
-import javax.sound.sampled.LineUnavailableException;
-import javax.sound.sampled.UnsupportedAudioFileException;
-import javax.swing.*;
-
-import javafx.embed.swing.JFXPanel;
-import javafx.scene.media.Media;
-import javafx.scene.media.MediaPlayer;
 
 @Component
 public class BroadcastListener implements PipeMsgListener {
 
+    private static final int RINGTONE_DURATION = 32000;
+
     private final String execCommand;
     private final InputPipe inputPipe;
+
+    private long lockTimeout;
 
     @Autowired
     public BroadcastListener(AdvertisementUtil advertisementUtil, PipeService pipeService, PipeID multicastId) throws IOException, InterruptedException {
@@ -71,11 +61,17 @@ public class BroadcastListener implements PipeMsgListener {
                 throw new RuntimeException(e);
             }
         }
-        System.out.println("received trigger from " + peerName);
-        try {
-            Runtime.getRuntime().exec(execCommand);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        long currentTime = System.currentTimeMillis();
+        if (currentTime > lockTimeout) {
+            System.out.println("received trigger from " + peerName);
+            lockTimeout = currentTime + RINGTONE_DURATION;
+            try {
+                Runtime.getRuntime().exec(execCommand);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            System.out.println("ignored trigger from " + peerName);
         }
     }
 
