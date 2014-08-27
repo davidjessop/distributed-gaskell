@@ -34,38 +34,41 @@ import javafx.scene.media.MediaPlayer;
 @Component
 public class BroadcastListener implements PipeMsgListener {
 
+    private final String execCommand;
+    private final InputPipe inputPipe;
     private int messageCount;
-    private InputPipe inputPipe;
 
     @Autowired
     public BroadcastListener(AdvertisementUtil advertisementUtil, PipeService pipeService, PipeID multicastId) throws IOException, InterruptedException {
         inputPipe = pipeService.createInputPipe(advertisementUtil.getAdvertisement(multicastId, true), this);
 
-        // initialise JFX toolkit
-        final CountDownLatch latch = new CountDownLatch(1);
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                new JFXPanel(); // initializes JavaFX environment
-                latch.countDown();
-            }
-        });
-        latch.await();
-
         InputStream in = ClassLoader.getSystemResourceAsStream("sarahringtone.mp3");
-        OutputStream out = new FileOutputStream(new File("/tmp/sarahringtone.mp3"));
+        File tmpFile = File.createTempFile("sarahringtone", "mp3");
+        OutputStream out = new FileOutputStream(tmpFile);
         IOUtils.copy(in, out);
         IOUtils.closeQuietly(in);
         IOUtils.closeQuietly(out);
+
+        String osName = System.getProperty("os.name").toLowerCase();
+        if (osName.startsWith("linux")) {
+            execCommand = "mpg321 " + tmpFile.getAbsolutePath();
+        } else if (osName.startsWith("mac")) {
+            execCommand = "afplay " + tmpFile.getAbsolutePath();
+        } else {
+            throw new RuntimeException("unsupported OS: " + osName);
+        }
+
     }
 
     @Override
     public void pipeMsgEvent(PipeMsgEvent event) {
         System.out.println("received message " + ++messageCount);
 
-        String bip = "file:/tmp/sarahringtone.mp3";
-        Media hit = new Media(bip);
-        MediaPlayer mediaPlayer = new MediaPlayer(hit);
-        mediaPlayer.play();
+        try {
+            Runtime.getRuntime().exec(execCommand);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }

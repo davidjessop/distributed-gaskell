@@ -4,27 +4,25 @@ import net.jxta.discovery.DiscoveryEvent;
 import net.jxta.discovery.DiscoveryListener;
 import net.jxta.discovery.DiscoveryService;
 import net.jxta.document.AdvertisementFactory;
+import net.jxta.document.MimeMediaType;
 import net.jxta.exception.PeerGroupException;
 import net.jxta.id.IDFactory;
-import net.jxta.peergroup.PeerGroup;
-import net.jxta.peergroup.PeerGroupID;
-import net.jxta.pipe.PipeID;
-import net.jxta.pipe.PipeMsgEvent;
-import net.jxta.pipe.PipeMsgListener;
-import net.jxta.pipe.PipeService;
-import net.jxta.platform.Module;
 import net.jxta.platform.ModuleClassID;
-import net.jxta.platform.NetworkManager;
 import net.jxta.protocol.ModuleClassAdvertisement;
-import net.jxta.protocol.ModuleImplAdvertisement;
-import net.jxta.protocol.ModuleSpecAdvertisement;
-import net.jxta.protocol.PipeAdvertisement;
+
+import nu.xom.Builder;
+import nu.xom.Document;
+import nu.xom.Nodes;
+import nu.xom.ParsingException;
+import nu.xom.ValidityException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.InetAddress;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -34,7 +32,7 @@ public class PeerTracker implements DiscoveryListener {
     private final PeerIdUtil peerIdUtil;
     private final DiscoveryService discoveryService;
 
-    private final Set<Peer> peers = new HashSet<>();
+    private final Set<String> peers = new HashSet<>();
 
     @Autowired
     public PeerTracker(PeerIdUtil peerIdUtil, DiscoveryService discoveryService) throws IOException, PeerGroupException {
@@ -45,14 +43,19 @@ public class PeerTracker implements DiscoveryListener {
     }
 
     @Scheduled(fixedDelay = 10000)
-    public void checkPeers() {
+    public void checkPeers() throws InterruptedException {
+        peers.clear();
         discoveryService.getRemoteAdvertisements(null, DiscoveryService.ADV, "Name", "STACK-OVERFLOW:HELLO", 1, null);
+        Thread.sleep(5000);
+
+        System.out.println("found " + peers.size() + " peers: " + String.join(",", peers));
     }
 
     public void publishModule() throws IOException {
         ModuleClassAdvertisement mcadv = (ModuleClassAdvertisement) AdvertisementFactory.newAdvertisement(ModuleClassAdvertisement.getAdvertisementType());
         mcadv.setName("STACK-OVERFLOW:HELLO");
-        mcadv.setDescription("Tutorial example to use JXTA module advertisement Framework");
+
+        mcadv.setDescription(System.getProperty("user.name") + "@" + InetAddress.getLocalHost().getHostName());
         ModuleClassID mcID = IDFactory.newModuleClassID();
         mcadv.setModuleClassID(mcID);
 
@@ -64,9 +67,30 @@ public class PeerTracker implements DiscoveryListener {
 
     @Override
     public void discoveryEvent(DiscoveryEvent event) {
-        Peer peer = peerIdUtil.fromSource(event.getSource());
+        String peer = null;
+        try {
+            InputStream in = event.getResponse().getAdvertisements().nextElement().getDocument(MimeMediaType.XML_DEFAULTENCODING).getStream();
+            Document doc = new Builder().build(in);
+            Nodes descriptions = doc.query("//Desc");
+            if (descriptions.size() > 0) {
+                peer = descriptions.get(0).getValue();
+            } else {
+                Nodes mcids = doc.query("//MCID");
+                if (mcids.size() > 0) {
+                    peer = mcids.get(0).getValue();
+                } else {
+                    peer = "anonymous";
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ValidityException e) {
+            e.printStackTrace();
+        } catch (ParsingException e) {
+            e.printStackTrace();
+        }
+
         peers.add(peer);
-        System.out.println("discovered peer: " + peer);
     }
 
 }
