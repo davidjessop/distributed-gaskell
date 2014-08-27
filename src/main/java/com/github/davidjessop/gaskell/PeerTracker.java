@@ -29,14 +29,12 @@ import java.util.Set;
 @Component
 public class PeerTracker implements DiscoveryListener {
 
-    private final PeerIdUtil peerIdUtil;
     private final DiscoveryService discoveryService;
 
-    private final Set<String> peers = new HashSet<>();
+    private final Set<String> peers = new HashSet<String>();
 
     @Autowired
-    public PeerTracker(PeerIdUtil peerIdUtil, DiscoveryService discoveryService) throws IOException, PeerGroupException {
-        this.peerIdUtil = peerIdUtil;
+    public PeerTracker(DiscoveryService discoveryService) throws IOException, PeerGroupException {
         this.discoveryService = discoveryService;
         publishModule();
         discoveryService.addDiscoveryListener(this);
