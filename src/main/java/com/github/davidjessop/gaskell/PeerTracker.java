@@ -16,6 +16,7 @@ import nu.xom.Nodes;
 import nu.xom.ParsingException;
 import nu.xom.ValidityException;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -49,7 +50,7 @@ public class PeerTracker implements DiscoveryListener {
         discoveryService.getRemoteAdvertisements(null, DiscoveryService.ADV, "Name", "STACK-OVERFLOW:HELLO", 1, null);
         Thread.sleep(5000);
 
-        System.out.println("found " + peers.size() + " peers: " + String.join(", ", peers));
+        System.out.println("found " + peers.size() + " peers: " + StringUtils.join(", ", peers));
     }
 
     public void publishModule() throws IOException {
